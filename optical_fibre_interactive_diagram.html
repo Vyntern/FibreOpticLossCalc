@@ -1,0 +1,313 @@
+
+<style>
+@keyframes photon {
+  0%   { transform: translateX(0px);   opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(var(--travel)); opacity: 0; }
+}
+@keyframes pulse-ring {
+  0%   { r: 7; opacity: .5; }
+  100% { r: 16; opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .photon { animation: photon var(--dur, 2s) linear infinite; }
+  .pulse-ring { animation: pulse-ring 1s ease-out infinite; }
+}
+.comp-hit { transition: opacity .15s; }
+.comp-hit:hover { opacity: .75; cursor: pointer; }
+.tooltip-box {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  min-width: 180px;
+  pointer-events: none;
+}
+.tt-title { font-weight: 500; margin-bottom: 4px; }
+.tt-val   { color: var(--color-text-secondary); font-size: 12px; }
+.tt-val span { font-weight: 500; color: var(--color-text-primary); }
+#tooltip { position: absolute; display: none; z-index: 10; }
+.ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary); }
+.ctrl-row label { min-width: 160px; }
+.ctrl-row input[type=range] { flex: 1; }
+.ctrl-row .val { min-width: 52px; text-align: right; font-weight: 500; color: var(--color-text-primary); }
+.metric-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin: 10px 0 14px; }
+.mc { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+.mc .ml { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 2px; }
+.mc .mv { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+.mc .mu { font-size: 11px; color: var(--color-text-secondary); }
+.mc.warn .mv { color: var(--color-text-warning); }
+.mc.danger .mv { color: var(--color-text-danger); }
+.mc.ok .mv { color: var(--color-text-success); }
+</style>
+
+<h2 class="sr-only">Interactive optical fibre link diagram showing transmitter, fibre, connectors, splices, and receiver with adjustable parameters and animated photons</h2>
+
+<div style="position:relative;">
+<svg id="fibsvg" width="100%" viewBox="0 0 680 220" style="display:block;overflow:visible">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <clipPath id="fibre-clip"><rect id="fibre-clip-rect" x="110" y="98" width="460" height="24" rx="0"/></clipPath>
+  </defs>
+
+  <!-- fibre cladding background -->
+  <rect x="110" y="94" width="460" height="32" rx="6" fill="#B5D4F4" opacity=".18" stroke="#378ADD" stroke-width="0.5"/>
+  <!-- fibre core -->
+  <rect id="fibre-core" x="110" y="98" width="460" height="24" rx="4" fill="#378ADD" opacity=".13"/>
+
+  <!-- photon particles (clipped to fibre) -->
+  <g clip-path="url(#fibre-clip)" id="photon-group"></g>
+
+  <!-- TX laser -->
+  <g class="comp-hit" id="tx-g" onclick="showTip(event,'tx')">
+    <rect x="18" y="76" width="86" height="68" rx="8" fill="var(--color-background-secondary)" stroke="#185FA5" stroke-width="0.5"/>
+    <rect x="26" y="84" width="70" height="20" rx="4" fill="#185FA5" opacity=".15"/>
+    <text x="61" y="97" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:#0C447C">TX laser</text>
+    <text x="61" y="119" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:var(--color-text-secondary)" id="tx-pwr-lbl">0.0 dBm</text>
+    <text x="61" y="135" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:var(--color-text-tertiary)" id="tx-wl-lbl">1310 nm</text>
+    <circle class="pulse-ring" cx="104" cy="110" r="7" fill="none" stroke="#378ADD" stroke-width="1.5"/>
+  </g>
+  <!-- TX arrow -->
+  <line x1="104" y1="110" x2="110" y2="110" stroke="#378ADD" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- RX detector -->
+  <g class="comp-hit" id="rx-g" onclick="showTip(event,'rx')">
+    <rect x="576" y="76" width="86" height="68" rx="8" fill="var(--color-background-secondary)" stroke-width="0.5" id="rx-border"/>
+    <rect x="584" y="84" width="70" height="20" rx="4" id="rx-header-fill"/>
+    <text x="619" y="97" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:500" id="rx-title-txt">RX detector</text>
+    <text x="619" y="119" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:var(--color-text-secondary)" id="rx-pwr-lbl">0.0 dBm</text>
+    <text x="619" y="135" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:var(--color-text-tertiary)" id="rx-margin-lbl">margin: 0 dB</text>
+  </g>
+  <!-- RX arrow -->
+  <line x1="570" y1="110" x2="576" y2="110" stroke="#378ADD" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- connector + splice markers group — populated by JS -->
+  <g id="marker-group"></g>
+
+  <!-- fibre length label -->
+  <text id="fibre-label" x="340" y="88" text-anchor="middle" style="font-size:11px;fill:var(--color-text-secondary)">50 km · SMF-28 · 1310 nm · 0.33 dB/km</text>
+
+  <!-- power level bar under fibre -->
+  <rect x="110" y="136" width="460" height="4" rx="2" fill="var(--color-background-secondary)"/>
+  <rect id="pwr-bar" x="110" y="136" width="460" height="4" rx="2" fill="#378ADD"/>
+  <text id="pwr-bar-lbl" x="340" y="152" text-anchor="middle" style="font-size:11px;fill:var(--color-text-secondary)">received: 0 dBm</text>
+</svg>
+<div id="tooltip"><div class="tooltip-box" id="tt-inner"></div></div>
+</div>
+
+<div class="metric-row" id="metrics"></div>
+
+<div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px;margin-top:4px">
+  <div class="ctrl-row"><label>Length</label><input type="range" id="sl_len" min="1" max="200" step="1" value="50" oninput="upd()"><span class="val"><span id="v_len">50</span> km</span></div>
+  <div class="ctrl-row"><label>Wavelength</label><input type="range" id="sl_wl" min="800" max="1650" step="10" value="1310" oninput="upd()"><span class="val"><span id="v_wl">1310</span> nm</span></div>
+  <div class="ctrl-row"><label>Fibre type</label>
+    <select id="sel_type" onchange="upd()" style="flex:1;padding:5px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px">
+      <option value="smf">SMF-28 (single-mode)</option>
+      <option value="mmf">OM4 (multi-mode)</option>
+      <option value="dsf">DSF (dispersion-shifted)</option>
+    </select><span class="val"></span>
+  </div>
+  <div class="ctrl-row"><label>Launch power</label><input type="range" id="sl_pwr" min="-10" max="20" step="0.5" value="3" oninput="upd()"><span class="val"><span id="v_pwr">3.0</span> dBm</span></div>
+  <div class="ctrl-row"><label>Connectors</label><input type="range" id="sl_conn" min="0" max="10" step="1" value="2" oninput="upd()"><span class="val"><span id="v_conn">2</span></span></div>
+  <div class="ctrl-row"><label>Loss / connector</label><input type="range" id="sl_connloss" min="0.1" max="1.5" step="0.05" value="0.5" oninput="upd()"><span class="val"><span id="v_connloss">0.50</span> dB</span></div>
+  <div class="ctrl-row"><label>Splices</label><input type="range" id="sl_spl" min="0" max="20" step="1" value="5" oninput="upd()"><span class="val"><span id="v_spl">5</span></span></div>
+  <div class="ctrl-row"><label>Loss / splice</label><input type="range" id="sl_splloss" min="0.01" max="0.5" step="0.01" value="0.1" oninput="upd()"><span class="val"><span id="v_splloss">0.10</span> dB</span></div>
+  <div class="ctrl-row"><label>Rx sensitivity</label><input type="range" id="sl_rxsen" min="-45" max="-10" step="0.5" value="-28" oninput="upd()"><span class="val"><span id="v_rxsen">-28.0</span> dBm</span></div>
+</div>
+
+<script>
+const FIBRE = {
+  smf:{ label:'SMF-28', attn: wl=>{ if(wl<1000)return 2.0+(1000-wl)*0.003; if(wl<1260)return 0.36+(wl-1000)*0.0005; if(wl<1360){ const w=(wl>=1368&&wl<=1398)?2.0:0; return 0.32-(wl-1260)*0.0004+w; } if(wl<1460)return 0.32-(wl-1360)*0.0005; if(wl<1550)return 0.19-(wl-1460)*0.0003; return 0.18+(wl-1550)*0.0005; }, zd:1310 },
+  mmf:{ label:'OM4',    attn: wl=>{ if(wl<850)return 3.5; if(wl<1000)return 2.5+(1000-wl)*0.01; return 1.0+(wl-1000)*0.002; }, zd:850 },
+  dsf:{ label:'DSF',    attn: wl=>{ if(wl<1200)return 0.5; if(wl<1400)return 0.35; if(wl<1550)return 0.22; return 0.2+(wl-1550)*0.001; }, zd:1550 },
+};
+function getAlpha(type,wl){ const b=FIBRE[type].attn(wl); const w=(wl>=1370&&wl<=1400)?2.5*Math.exp(-0.5*Math.pow((wl-1383)/8,2)):0; return Math.max(0.15,b+w); }
+
+function vals(){
+  return { len:+document.getElementById('sl_len').value, wl:+document.getElementById('sl_wl').value,
+    type:document.getElementById('sel_type').value, pwr:+document.getElementById('sl_pwr').value,
+    conn:+document.getElementById('sl_conn').value, connloss:+document.getElementById('sl_connloss').value,
+    spl:+document.getElementById('sl_spl').value, splloss:+document.getElementById('sl_splloss').value,
+    rxsen:+document.getElementById('sl_rxsen').value };
+}
+
+let lastV = null;
+
+function upd(){
+  const v = vals();
+  const alpha = getAlpha(v.type, v.wl);
+  const fibreLoss = alpha*v.len;
+  const connLoss  = v.conn*v.connloss;
+  const splLoss   = v.spl*v.splloss;
+  const total     = fibreLoss+connLoss+splLoss;
+  const rxPwr     = v.pwr - total;
+  const margin    = rxPwr - v.rxsen;
+  lastV = {v, alpha, fibreLoss, connLoss, splLoss, total, rxPwr, margin};
+
+  document.getElementById('v_len').textContent      = v.len;
+  document.getElementById('v_wl').textContent       = v.wl;
+  document.getElementById('v_pwr').textContent      = v.pwr.toFixed(1);
+  document.getElementById('v_conn').textContent     = v.conn;
+  document.getElementById('v_connloss').textContent = v.connloss.toFixed(2);
+  document.getElementById('v_spl').textContent      = v.spl;
+  document.getElementById('v_splloss').textContent  = v.splloss.toFixed(2);
+  document.getElementById('v_rxsen').textContent    = v.rxsen.toFixed(1);
+
+  document.getElementById('tx-pwr-lbl').textContent  = v.pwr.toFixed(1)+' dBm';
+  document.getElementById('tx-wl-lbl').textContent   = v.wl+' nm';
+  document.getElementById('fibre-label').textContent = v.len+' km · '+FIBRE[v.type].label+' · '+v.wl+' nm · '+alpha.toFixed(3)+' dB/km';
+
+  const pct = Math.max(0, Math.min(1, (rxPwr - v.rxsen + 20) / (v.pwr - v.rxsen + 20)));
+  document.getElementById('pwr-bar').setAttribute('width', (460*pct).toFixed(1));
+  const barColor = margin < 0 ? '#E24B4A' : margin < 3 ? '#EF9F27' : '#378ADD';
+  document.getElementById('pwr-bar').setAttribute('fill', barColor);
+  document.getElementById('pwr-bar-lbl').textContent = 'received: '+rxPwr.toFixed(1)+' dBm';
+
+  const mCls = margin<0?'danger':margin<3?'warn':'ok';
+  document.getElementById('metrics').innerHTML = `
+    <div class="mc"><div class="ml">Attenuation</div><div class="mv">${alpha.toFixed(3)}<span class="mu"> dB/km</span></div></div>
+    <div class="mc"><div class="ml">Total loss</div><div class="mv">${total.toFixed(2)}<span class="mu"> dB</span></div></div>
+    <div class="mc"><div class="ml">Received power</div><div class="mv">${rxPwr.toFixed(1)}<span class="mu"> dBm</span></div></div>
+    <div class="mc ${mCls}"><div class="ml">Power margin</div><div class="mv">${margin.toFixed(1)}<span class="mu"> dB</span></div></div>
+  `;
+
+  const rxOk = margin >= 0;
+  const rxBorderColor = rxOk ? (margin>=3?'#1D9E75':'#EF9F27') : '#E24B4A';
+  const rxHeaderColor = rxOk ? (margin>=3?'#1D9E75':'#EF9F27') : '#E24B4A';
+  document.getElementById('rx-border').setAttribute('stroke', rxBorderColor);
+  document.getElementById('rx-header-fill').setAttribute('fill', rxHeaderColor);
+  document.getElementById('rx-header-fill').setAttribute('opacity', '0.18');
+  document.getElementById('rx-title-txt').setAttribute('fill', rxOk?(margin>=3?'#085041':'#633806'):'#791F1F');
+  document.getElementById('rx-pwr-lbl').textContent   = rxPwr.toFixed(1)+' dBm';
+  document.getElementById('rx-margin-lbl').textContent = 'margin: '+margin.toFixed(1)+' dB';
+
+  drawMarkers(v, alpha);
+  drawPhotons(v, rxPwr, v.rxsen);
+}
+
+function drawMarkers(v, alpha){
+  const g = document.getElementById('marker-group');
+  g.innerHTML = '';
+  const FIBRE_X0 = 110, FIBRE_W = 460;
+
+  function addMarker(xFrac, type, label, loss){
+    const x = FIBRE_X0 + xFrac * FIBRE_W;
+    const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if(type === 'connector'){
+      const el = document.createElementNS('http://www.w3.org/2000/svg','g');
+      el.setAttribute('class','comp-hit');
+      el.setAttribute('onclick',`showTip(event,'conn_${label}',${loss.toFixed(2)},${(loss).toFixed(2)})`);
+      el.innerHTML = `
+        <rect x="${x-7}" y="90" width="14" height="40" rx="3" fill="#185FA5" opacity=".22" stroke="#185FA5" stroke-width="0.5"/>
+        <rect x="${x-5}" y="94" width="10" height="32" rx="2" fill="#185FA5" opacity=".35"/>
+        <line x1="${x}" y1="94" x2="${x}" y2="126" stroke="#0C447C" stroke-width="0.5" opacity=".5"/>
+        <text x="${x}" y="80" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:var(--color-text-secondary)">C</text>
+      `;
+      g.appendChild(el);
+    } else {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','g');
+      el.setAttribute('class','comp-hit');
+      el.setAttribute('onclick',`showTip(event,'spl_${label}',${loss.toFixed(2)},${(loss).toFixed(2)})`);
+      el.innerHTML = `
+        <line x1="${x}" y1="92" x2="${x}" y2="128" stroke="#639922" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <circle cx="${x}" cy="110" r="5" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+        <text x="${x}" y="80" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:var(--color-text-secondary)">S</text>
+      `;
+      g.appendChild(el);
+    }
+  }
+
+  const totalPts = v.conn + v.spl;
+  if(totalPts === 0) return;
+  const allPts = [];
+  for(let i=0;i<v.conn;i++) allPts.push({type:'connector', idx:i});
+  for(let i=0;i<v.spl;i++)  allPts.push({type:'splice', idx:i});
+  allPts.sort((a,b) => a.idx - b.idx || (a.type === 'connector' ? -1 : 1));
+
+  allPts.forEach((pt,i) => {
+    const frac = (i+1)/(totalPts+1);
+    if(pt.type === 'connector') addMarker(frac,'connector',pt.idx+1,v.connloss);
+    else addMarker(frac,'splice',pt.idx+1,v.splloss);
+  });
+}
+
+let photonTimers = [];
+function drawPhotons(v, rxPwr, rxsen){
+  photonTimers.forEach(t => clearTimeout(t));
+  photonTimers = [];
+  const pg = document.getElementById('photon-group');
+  pg.innerHTML = '';
+  const active = rxPwr > rxsen - 5;
+  if(!active) return;
+
+  const brightness = Math.max(0.2, Math.min(1.0, (rxPwr - rxsen + 10) / 20));
+  const nPhotons = Math.max(3, Math.min(12, Math.round(brightness * 12)));
+  const dur = 2.0 + (1 - brightness) * 1.5;
+  const wl = v.wl;
+  let hue = wl < 500 ? 260 : wl < 590 ? 220 : wl < 650 ? 30 : wl < 780 ? 0 : wl < 1100 ? 200 : 200;
+  const photonColor = wl >= 1100 ? `rgba(55,138,221,${brightness})` : `hsla(${hue},80%,55%,${brightness})`;
+
+  for(let i=0;i<nPhotons;i++){
+    const delay = (i/nPhotons)*dur;
+    const yOff = (Math.random()*14-7).toFixed(1);
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx','110');
+    c.setAttribute('cy', (110 + parseFloat(yOff)).toString());
+    c.setAttribute('r','3');
+    c.setAttribute('fill', photonColor);
+    c.setAttribute('class','photon');
+    c.style.setProperty('--travel','460px');
+    c.style.setProperty('--dur', dur+'s');
+    c.style.animationDelay = delay+'s';
+    pg.appendChild(c);
+  }
+}
+
+function showTip(evt, id, loss, cumLoss){
+  const tt = document.getElementById('tooltip');
+  const inner = document.getElementById('tt-inner');
+  let html = '';
+  if(id === 'tx'){
+    const v = lastV.v;
+    html = `<div class="tt-title">TX laser</div>
+      <div class="tt-val">Launch power: <span>${v.pwr.toFixed(1)} dBm</span></div>
+      <div class="tt-val">Wavelength: <span>${v.wl} nm</span></div>
+      <div class="tt-val">Fibre: <span>${FIBRE[v.type].label}</span></div>`;
+  } else if(id === 'rx'){
+    const {v,rxPwr,margin,total}=lastV;
+    const st = margin>=3?'Link OK':margin>=0?'Low margin':'Link down';
+    html = `<div class="tt-title">RX detector</div>
+      <div class="tt-val">Received power: <span>${rxPwr.toFixed(1)} dBm</span></div>
+      <div class="tt-val">Sensitivity: <span>${v.rxsen.toFixed(1)} dBm</span></div>
+      <div class="tt-val">Power margin: <span>${margin.toFixed(1)} dB</span></div>
+      <div class="tt-val">Status: <span>${st}</span></div>`;
+  } else if(id.startsWith('conn_')){
+    const {v,alpha}=lastV;
+    html = `<div class="tt-title">Connector</div>
+      <div class="tt-val">Insertion loss: <span>${v.connloss.toFixed(2)} dB</span></div>
+      <div class="tt-val">Cause: <span>end-face mismatch, dirt</span></div>`;
+  } else if(id.startsWith('spl_')){
+    const {v}=lastV;
+    html = `<div class="tt-title">Fusion splice</div>
+      <div class="tt-val">Loss: <span>${v.splloss.toFixed(2)} dB</span></div>
+      <div class="tt-val">Cause: <span>core offset, angle</span></div>`;
+  }
+  inner.innerHTML = html;
+  const svgEl = document.getElementById('fibsvg');
+  const rect  = svgEl.getBoundingClientRect();
+  const ex = evt.clientX - rect.left;
+  const ey = evt.clientY - rect.top;
+  tt.style.left = Math.min(ex+10, rect.width-200)+'px';
+  tt.style.top  = (ey-10)+'px';
+  tt.style.display = 'block';
+  document.addEventListener('click', hideTip, {once:true, capture:true});
+}
+function hideTip(){ document.getElementById('tooltip').style.display='none'; }
+
+upd();
+</script>
