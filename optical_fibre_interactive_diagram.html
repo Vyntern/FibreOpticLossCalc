@@ -41,9 +41,24 @@
 .mc.warn .mv { color: var(--color-text-warning); }
 .mc.danger .mv { color: var(--color-text-danger); }
 .mc.ok .mv { color: var(--color-text-success); }
+
+.formula-section { margin-top:24px; border-top:0.5px solid var(--color-border-tertiary); padding-top:20px; }
+.formula-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-top:14px; }
+.formula-card { background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-lg); padding:14px 16px; }
+.fc-title { font-size:13px; font-weight:500; color:var(--color-text-primary); margin-bottom:6px; }
+.fc-eq { font-family:Tahoma, sans-serif; font-size:13px; color:var(--color-text-primary); background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:8px 10px; margin-bottom:8px; line-height:1.6; }
+.fc-desc { font-size:12px; color:var(--color-text-secondary); line-height:1.6; }
+.fc-live { font-size:12px; color:var(--color-text-secondary); margin-top:6px; border-top:0.5px solid var(--color-border-tertiary); padding-top:6px; }
+.fc-live span { font-weight:500; color:var(--color-text-primary); font-family:Tahoma, sans-serif; }
+.sym-table { width:100%; font-size:12px; border-collapse:collapse; margin-top:14px; }
+.sym-table th { text-align:left; font-weight:500; font-size:12px; color:var(--color-text-secondary); padding:4px 8px; border-bottom:0.5px solid var(--color-border-tertiary); }
+.sym-table td { padding:5px 8px; color:var(--color-text-secondary); border-bottom:0.5px solid var(--color-border-tertiary); vertical-align:top; }
+.sym-table td:first-child { font-family:Tahoma, sans-serif; font-size:12px; color:var(--color-text-primary); white-space:nowrap; }
+.sym-table tr:last-child td { border-bottom:none; }
+.section-label { font-size:12px; color:var(--color-text-secondary); margin-bottom:4px; font-weight:500; letter-spacing:.02em; text-transform:uppercase; }
 </style>
 
-<h2 class="sr-only">Optical Fibre Link Loss Simulator</h2>
+<h2 class="sr-only";>Optical Fibre Power Budget Simulator</h2>
 
 <div style="position:relative;">
 <svg id="fibsvg" width="100%" viewBox="0 0 680 220" style="display:block;overflow:visible">
@@ -127,42 +142,36 @@
       <div class="fc-title">Total link loss</div>
       <div class="fc-eq">L<sub>total</sub> = L<sub>fibre</sub> + L<sub>conn</sub> + L<sub>splice</sub></div>
       <div class="fc-desc">Sum of all loss contributions along the link, in dB. All terms add linearly because dB is a logarithmic scale.</div>
-      <div class="fc-live">Current: <span id="f_total">—</span> dB</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">Fibre attenuation loss</div>
       <div class="fc-eq">L<sub>fibre</sub> = α(λ) × ℓ</div>
       <div class="fc-desc">Attenuation coefficient α (dB/km) multiplied by link length ℓ (km). α depends on wavelength — minimum around 1550 nm for SMF.</div>
-      <div class="fc-live">Current: α = <span id="f_alpha">—</span> dB/km · <span id="f_len2">—</span> km = <span id="f_floss">—</span> dB</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">Connector loss</div>
       <div class="fc-eq">L<sub>conn</sub> = N<sub>c</sub> × α<sub>c</sub></div>
       <div class="fc-desc">Number of connectors N<sub>c</sub> times loss per connector α<sub>c</sub> (dB). Typical value 0.3–0.75 dB per mated pair.</div>
-      <div class="fc-live">Current: <span id="f_conn">—</span> × <span id="f_connloss">—</span> dB = <span id="f_closs">—</span> dB</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">Splice loss</div>
       <div class="fc-eq">L<sub>splice</sub> = N<sub>s</sub> × α<sub>s</sub></div>
       <div class="fc-desc">Number of fusion splices N<sub>s</sub> times loss per splice α<sub>s</sub> (dB). Good fusion splices are typically &lt;0.1 dB.</div>
-      <div class="fc-live">Current: <span id="f_spl">—</span> × <span id="f_splloss">—</span> dB = <span id="f_sloss">—</span> dB</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">Received power</div>
       <div class="fc-eq">P<sub>rx</sub> = P<sub>tx</sub> − L<sub>total</sub></div>
       <div class="fc-desc">Launch power P<sub>tx</sub> (dBm) minus total loss. Subtraction in dBm space equals division in linear power — every 3 dB halves the power.</div>
-      <div class="fc-live">Current: <span id="f_ptx">—</span> − <span id="f_total2">—</span> = <span id="f_prx">—</span> dBm</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">Power margin</div>
       <div class="fc-eq">M = P<sub>rx</sub> − P<sub>rx,min</sub></div>
       <div class="fc-desc">Headroom above the receiver sensitivity threshold. M &lt; 0 dB means the link fails. A margin of ≥ 3 dB is typically required for reliable operation.</div>
-      <div class="fc-live">Current: <span id="f_prx2">—</span> − <span id="f_rxsen">—</span> = <span id="f_margin">—</span> dB</div>
     </div>
 
     <div class="formula-card">
@@ -175,14 +184,12 @@
       <div class="fc-title">Chromatic dispersion</div>
       <div class="fc-eq">D(λ) = D<sub>0</sub> · (λ − λ<sub>ZD</sub>)</div>
       <div class="fc-desc">Dispersion in ps/(nm·km). λ<sub>ZD</sub> is the zero-dispersion wavelength (≈1310 nm SMF, ≈850 nm OM4, ≈1550 nm DSF). D<sub>0</sub> is the dispersion slope.</div>
-      <div class="fc-live">Current: <span id="f_disp">—</span> ps/(nm·km) at <span id="f_wl2">—</span> nm</div>
     </div>
 
     <div class="formula-card">
       <div class="fc-title">dBm ↔ mW conversion</div>
       <div class="fc-eq">P<sub>dBm</sub> = 10 · log₁₀(P<sub>mW</sub> / 1 mW)<br>P<sub>mW</sub> = 10<sup>P<sub>dBm</sub> / 10</sup></div>
       <div class="fc-desc">All power values in this simulator use dBm (decibels relative to 1 mW). Losses in dB subtract directly from dBm values.</div>
-      <div class="fc-live">P<sub>rx</sub> = <span id="f_prx_mw">—</span> mW · <span id="f_prx_uw">—</span> µW</div>
     </div>
 
   </div>
