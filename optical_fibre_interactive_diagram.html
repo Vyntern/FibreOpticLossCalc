@@ -119,6 +119,94 @@
   <div class="ctrl-row"><label>Rx sensitivity</label><input type="range" id="sl_rxsen" min="-45" max="-10" step="0.5" value="-28" oninput="upd()"><span class="val"><span id="v_rxsen">-28.0</span> dBm</span></div>
 </div>
 
+<div class="formula-section">
+  <p class="section-label">Formulas</p>
+  <div class="formula-grid">
+
+    <div class="formula-card">
+      <div class="fc-title">Total link loss</div>
+      <div class="fc-eq">L<sub>total</sub> = L<sub>fibre</sub> + L<sub>conn</sub> + L<sub>splice</sub></div>
+      <div class="fc-desc">Sum of all loss contributions along the link, in dB. All terms add linearly because dB is a logarithmic scale.</div>
+      <div class="fc-live">Current: <span id="f_total">—</span> dB</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Fibre attenuation loss</div>
+      <div class="fc-eq">L<sub>fibre</sub> = α(λ) × ℓ</div>
+      <div class="fc-desc">Attenuation coefficient α (dB/km) multiplied by link length ℓ (km). α depends on wavelength — minimum around 1550 nm for SMF.</div>
+      <div class="fc-live">Current: α = <span id="f_alpha">—</span> dB/km · <span id="f_len2">—</span> km = <span id="f_floss">—</span> dB</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Connector loss</div>
+      <div class="fc-eq">L<sub>conn</sub> = N<sub>c</sub> × α<sub>c</sub></div>
+      <div class="fc-desc">Number of connectors N<sub>c</sub> times loss per connector α<sub>c</sub> (dB). Typical value 0.3–0.75 dB per mated pair.</div>
+      <div class="fc-live">Current: <span id="f_conn">—</span> × <span id="f_connloss">—</span> dB = <span id="f_closs">—</span> dB</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Splice loss</div>
+      <div class="fc-eq">L<sub>splice</sub> = N<sub>s</sub> × α<sub>s</sub></div>
+      <div class="fc-desc">Number of fusion splices N<sub>s</sub> times loss per splice α<sub>s</sub> (dB). Good fusion splices are typically &lt;0.1 dB.</div>
+      <div class="fc-live">Current: <span id="f_spl">—</span> × <span id="f_splloss">—</span> dB = <span id="f_sloss">—</span> dB</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Received power</div>
+      <div class="fc-eq">P<sub>rx</sub> = P<sub>tx</sub> − L<sub>total</sub></div>
+      <div class="fc-desc">Launch power P<sub>tx</sub> (dBm) minus total loss. Subtraction in dBm space equals division in linear power — every 3 dB halves the power.</div>
+      <div class="fc-live">Current: <span id="f_ptx">—</span> − <span id="f_total2">—</span> = <span id="f_prx">—</span> dBm</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Power margin</div>
+      <div class="fc-eq">M = P<sub>rx</sub> − P<sub>rx,min</sub></div>
+      <div class="fc-desc">Headroom above the receiver sensitivity threshold. M &lt; 0 dB means the link fails. A margin of ≥ 3 dB is typically required for reliable operation.</div>
+      <div class="fc-live">Current: <span id="f_prx2">—</span> − <span id="f_rxsen">—</span> = <span id="f_margin">—</span> dB</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">OH water-peak absorption</div>
+      <div class="fc-eq">α<sub>OH</sub>(λ) = 2.5 · e<sup>−½((λ−1383)/8)²</sup></div>
+      <div class="fc-desc">Gaussian absorption peak centred at 1383 nm, caused by residual hydroxyl (OH) ions in the silica. Significant in older fibres; suppressed in low-water-peak fibre.</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">Chromatic dispersion</div>
+      <div class="fc-eq">D(λ) = D<sub>0</sub> · (λ − λ<sub>ZD</sub>)</div>
+      <div class="fc-desc">Dispersion in ps/(nm·km). λ<sub>ZD</sub> is the zero-dispersion wavelength (≈1310 nm SMF, ≈850 nm OM4, ≈1550 nm DSF). D<sub>0</sub> is the dispersion slope.</div>
+      <div class="fc-live">Current: <span id="f_disp">—</span> ps/(nm·km) at <span id="f_wl2">—</span> nm</div>
+    </div>
+
+    <div class="formula-card">
+      <div class="fc-title">dBm ↔ mW conversion</div>
+      <div class="fc-eq">P<sub>dBm</sub> = 10 · log₁₀(P<sub>mW</sub> / 1 mW)<br>P<sub>mW</sub> = 10<sup>P<sub>dBm</sub> / 10</sup></div>
+      <div class="fc-desc">All power values in this simulator use dBm (decibels relative to 1 mW). Losses in dB subtract directly from dBm values.</div>
+      <div class="fc-live">P<sub>rx</sub> = <span id="f_prx_mw">—</span> mW · <span id="f_prx_uw">—</span> µW</div>
+    </div>
+
+  </div>
+
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-top:16px;margin-bottom:6px;font-weight:500">Symbol reference</p>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Name</th><th>Unit</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>α(λ)</td><td>Attenuation coefficient</td><td>dB/km</td><td>Wavelength-dependent; includes Rayleigh scattering, OH peak, IR absorption</td></tr>
+      <tr><td>ℓ</td><td>Fibre length</td><td>km</td><td>Physical cable length</td></tr>
+      <tr><td>N<sub>c</sub></td><td>Number of connectors</td><td>—</td><td>Each mated pair counted once</td></tr>
+      <tr><td>α<sub>c</sub></td><td>Connector loss</td><td>dB</td><td>Per connector; 0.3–0.75 dB typical</td></tr>
+      <tr><td>N<sub>s</sub></td><td>Number of splices</td><td>—</td><td>Fusion splices along the route</td></tr>
+      <tr><td>α<sub>s</sub></td><td>Splice loss</td><td>dB</td><td>Per splice; &lt;0.1 dB for good fusion</td></tr>
+      <tr><td>P<sub>tx</sub></td><td>Launch power</td><td>dBm</td><td>Power at fibre input from laser</td></tr>
+      <tr><td>P<sub>rx</sub></td><td>Received power</td><td>dBm</td><td>P<sub>tx</sub> − L<sub>total</sub></td></tr>
+      <tr><td>P<sub>rx,min</sub></td><td>Receiver sensitivity</td><td>dBm</td><td>Minimum detectable power for BER target</td></tr>
+      <tr><td>M</td><td>Power margin</td><td>dB</td><td>Must be &gt; 0; ≥ 3 dB recommended</td></tr>
+      <tr><td>λ<sub>ZD</sub></td><td>Zero-dispersion wavelength</td><td>nm</td><td>1310 nm (SMF), 850 nm (OM4), 1550 nm (DSF)</td></tr>
+      <tr><td>D<sub>0</sub></td><td>Dispersion slope</td><td>ps/nm²·km</td><td>Rate of change of D with wavelength</td></tr>
+    </tbody>
+  </table>
+</div>
+
 <script>
 const FIBRE = {
   smf:{ label:'SMF-28', attn: wl=>{ if(wl<1000)return 2.0+(1000-wl)*0.003; if(wl<1260)return 0.36+(wl-1000)*0.0005; if(wl<1360){ const w=(wl>=1368&&wl<=1398)?2.0:0; return 0.32-(wl-1260)*0.0004+w; } if(wl<1460)return 0.32-(wl-1360)*0.0005; if(wl<1550)return 0.19-(wl-1460)*0.0003; return 0.18+(wl-1550)*0.0005; }, zd:1310 },
